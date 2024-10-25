@@ -67,6 +67,28 @@ rbgjr_t_student<- function(y, proxi) {
 }
 
 
+
+rbigarch <- function(y, proxi) {
+  par_ini <-  grid_rbigarch(y, proxi)
+  ra <- matrix(c(1, 0,
+                 0, 1, 
+                 0, -1), ncol = 2, byrow = TRUE)
+  rb <- c(1e-06, 0,-1)
+  param <- constrOptim(theta = par_ini, f = rbigarch_loglik, grad = NULL, ui = ra, ci = rb, r = y, proxi = proxi, outer.iterations = 400, outer.eps = 1e-07)$par
+}
+
+
+rbigarch_t_student <- function(y, proxi) {
+  par_ini <-  grid_rbigarch_t_student(y, proxi)
+  ra <- matrix(c(1, 0, 0, 
+                 0, 1, 0,
+                 0, -1, 0, 
+                 0, 0, 1), ncol = 3, byrow = TRUE)
+  rb <- c(1e-06, 0, -1, 2.00001)
+  param <- constrOptim(theta = par_ini, f = rbigarch_loglik_t_student, grad = NULL, ui = ra, ci = rb, r = y, proxi = proxi, outer.iterations = 400, outer.eps = 1e-07)$par
+}
+
+
 ## Volatility estimation
 rbgarch_h <- function(y, proxi, params) {
   n <- length(y)
@@ -93,5 +115,13 @@ rbgjr_h <- function(y, proxi, params) {
 }
 
 
-
+rbigarch_h <- function(y, proxi, params) {
+  n <- length(y)
+  h <- rep(NA, n)
+  h[1] <- var(y)
+  for (i in 2:(n + 1)) {
+    h[i] = params[1] + params[2] * proxi[i-1] + (1-params[2]) * h[i-1]
+  }
+  return(h)
+}
 

@@ -268,6 +268,10 @@ loss_qlike <- function(h_hat, h) {
   mean(log(h) + h_hat/h)
 }
 
+loss_qlike_ult <- function(h_hat, h) {
+  mean(h_hat/h - log(h_hat/h) - 1)
+}
+
 loss_mse_log <- function(h_hat, h) {
   mean((log(h_hat) - log(h))^2)
 }

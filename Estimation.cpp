@@ -87,6 +87,41 @@ SEXP rbgjr_loglik_t_student(NumericVector theta, NumericVector r, NumericVector 
 
 
 
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+SEXP rbigarch_loglik(NumericVector theta, NumericVector r, NumericVector proxi){
+  int n = r.size();
+  NumericVector h(n), log_lik(n - 1);
+  Rcpp::Function sum("sum");
+  Rcpp::Function var("var");
+  h[0] = var(r);
+  for(int i = 1; i < n; i++){
+    h[i] = theta[0] + theta[1]*proxi[i-1]+ (1-theta[1])*h[i-1];
+    log_lik[i - 1] = -0.5*pow(r[i], 2) / h[i] - 0.5* log(h[i]);
+  }
+  return Rcpp::wrap(sum(-log_lik));
+}
+
+
+
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+SEXP rbigarch_loglik_t_student(NumericVector theta, NumericVector r, NumericVector proxi){
+  int n = r.size();
+  double pi = 3.141592653589793238462643383280;
+  NumericVector h(n), log_lik(n - 1);
+  Rcpp::Function sum("sum");
+  Rcpp::Function var("var");
+  h[0] = var(r);
+  for(int i = 1; i < n; i++){
+    h[i] = theta[0] + theta[1]*proxi[i-1]+ (1-theta[1])*h[i-1];
+    log_lik[i - 1] =  log(std::tgamma((theta[3] + 1.0)/2.0)) - log(std::tgamma(theta[3]/2))- 0.5*log(theta[3]*pi)- 0.5*log(h[i]) - ((theta[3] + 1.0 )/2.0)*log(1+(1+pow(r[i], 2.0)/h[i]));
+    
+  }
+  return Rcpp::wrap(sum(-log_lik));
+}
+
+
 
 
 
@@ -271,3 +306,67 @@ SEXP grid_rbgarch_t_student(NumericVector y, NumericVector proxi){
 }
 
 
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+SEXP grid_rbigarch(NumericVector y, NumericVector proxi){
+  NumericVector coeff(2), vi(2);
+  double omega, alpha;
+  double omega_min = 0.00001, omega_max= 0.05, alpha_min = 0.005,  alpha_max = 0.2,  n_omega = 5, n_alpha = 5;
+  double ml = 100000000, nml;
+  double lm_omega = (omega_max - omega_min)/n_omega;
+  double lm_alpha = (alpha_max - alpha_min)/n_alpha;
+  Rcpp::Function rbigarch_loglik("rbigarch_loglik");
+  
+  for(int nj = 0; nj < n_alpha; nj++){
+      for(int ni =0; ni < n_omega; ni++){
+        alpha = alpha_min + nj*lm_alpha;
+        omega = omega_min +ni*lm_omega;
+          coeff[0] = omega;
+          coeff[1] = alpha;
+          nml = Rcpp::as<double>(rbigarch_loglik(coeff, y, proxi));
+          if (nml < ml){
+            vi[0] = coeff[0];
+            vi[1] = coeff[1];
+            ml=nml;
+          }
+        }
+      
+  }
+  return(vi);
+}
+
+
+
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+SEXP grid_rbigarch_t_student(NumericVector y, NumericVector proxi){
+  NumericVector coeff(3), vi(3);
+  double omega, alpha, tau;
+  double omega_min = 0.00001, omega_max= 0.05, alpha_min = 0.005,  alpha_max = 0.2, tau_min = 3.0,  tau_max = 20.0,  n_omega = 5, n_alpha = 5, n_tau = 5;
+  double ml = 100000000, nml;
+  double lm_omega = (omega_max - omega_min)/n_omega;
+  double lm_alpha = (alpha_max - alpha_min)/n_alpha;
+  double lm_tau = (tau_max - tau_min)/n_tau;
+  Rcpp::Function rbigarch_loglik_t_student("rbigarch_loglik_t_student");
+  
+  for(int nj = 0; nj < n_alpha; nj++){
+      for(int ni =0; ni < n_omega; ni++){
+        for(int nh =0; nh < n_tau; nh++){
+          alpha = alpha_min + nj*lm_alpha;
+          omega = omega_min +ni*lm_omega;
+          tau = tau_min +nh*lm_tau;
+            coeff[0] = omega;
+            coeff[1] = alpha;
+            coeff[2] = tau;
+            nml = Rcpp::as<double>(rbigarch_loglik_t_student(coeff, y, proxi));
+            if (nml < ml){
+              vi[0] = coeff[0];
+              vi[1] = coeff[1];
+              vi[2] = coeff[2];
+              ml=nml;
+            }
+          }
+        }
+   }
+  return(vi);
+}
